@@ -2,15 +2,39 @@ from django.shortcuts import render, redirect
 from django.db.models import Q
 from .models import Room, Topic
 from .forms import RoomForm
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 
 
 def loginPage(request):
     if request.method == 'POST':
-        email = request.method.POST.get('email')
-        password = request.method.POST.get('password')
-        print(email, password)
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        try:
+            user = User.objects.get(username=username)
+            
+        except:
+            messages.error(request, "User doesn't  exist")
+            return redirect(home)
+        
+        user = authenticate(request, username=username, password=password)
+        print(user.is_authenticated)
+        if user.is_authenticated:
+            login(request, user)
+            return redirect(home)
+        else:
+            messages.error(request, "Username OR password does't exist")
+           
     context= {}
     return render(request, 'base/login_register.html', context)
+
+def logoutUser(request):
+    
+    logout(request)
+    
+    return redirect('home')
 
 def home(request):
     q = request.GET.get('q')
@@ -33,6 +57,7 @@ def room(request, pk):
     return render(request, 'base/rooms.html', {'room': room_detail})
 
 
+@login_required(login_url="login")
 def createRoom(request):
     context = {'form': RoomForm}
     if request.method == 'POST':
@@ -45,6 +70,7 @@ def createRoom(request):
     return render(request, 'base/room_form.html', context)
 
 
+@login_required(login_url="login")
 def updateRoom(request, pk):
 
     room = Room.objects.get(id=pk)
@@ -60,7 +86,7 @@ def updateRoom(request, pk):
 
     return render(request, 'base/room_form.html', context)
 
-
+@login_required(login_url="login")
 def deleteRoom(request, pk):
     room = Room.objects.get(id=pk)
     if request.method == 'POST':
